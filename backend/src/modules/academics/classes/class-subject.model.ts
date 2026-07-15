@@ -1,53 +1,44 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../../config/database";
 
-export class Grade extends Model {
+export class ClassSubject extends Model {
   public id!: string;
-  public examId!: string;
-  public studentId!: string;
-  public marksObtained!: number;
-  public remarks?: string;
-  public recordedById!: string;
+  public classId!: string;
+  public subjectId!: string;
+  public teacherId!: string;
+  public subject!: any;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
 
-Grade.init(
+ClassSubject.init(
   {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    examId: {
+    classId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    studentId: {
+    subjectId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    marksObtained: {
-      type: DataTypes.DECIMAL(5, 2),
-      allowNull: false,
-    },
-    remarks: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    recordedById: {
+    teacherId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
   },
   {
     sequelize,
-    tableName: "grades",
+    tableName: "class_subjects",
     indexes: [
       {
         unique: true,
-        fields: ["examId", "studentId"],
+        fields: ["classId", "subjectId"],
       },
     ],
   }
