@@ -232,7 +232,17 @@ export class RegistrarService {
 
   static async getClasses() {
     return await Class.findAll({
-      include: [{ model: Teacher, as: "homeroomTeacher" }],
+      include: [
+        { model: Teacher, as: "homeroomTeacher" },
+        {
+          model: ClassSubject,
+          as: "classSubjects",
+          include: [
+            { model: Subject, as: "subject" },
+            { model: Teacher, as: "teacher" }
+          ]
+        }
+      ],
     });
   }
 
