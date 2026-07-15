@@ -1,200 +1,296 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { api } from "../../services/api";
 import SidebarLayout from "../../components/SidebarLayout";
+import { api } from "../../services/api";
 
-interface RankRow {
-  rank: number;
+interface ClassSection {
+  id: string;
+  name: string;
+  gradeLevel: number;
+}
+
+interface SubjectGrade {
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
+  score: number;
+}
+
+interface StudentRank {
+  studentId: string;
   firstName: string;
   middleName: string;
   lastName: string;
   admissionNumber: string;
-  average: number;
+  subjectGrades: SubjectGrade[];
   grandTotal: number;
-  subjectGrades: { subjectName: string; score: number }[];
+  average: number;
+  rank: number;
 }
 
 export default function RankingsPage() {
-  const [classes,     setClasses]     = useState<any[]>([]);
-  const [rankings,    setRankings]    = useState<RankRow[]>([]);
-  const [classId,     setClassId]     = useState("");
-  const [semester,    setSemester]    = useState("Semester_1");
-  const [academicYear,setAcademicYear]= useState("2026-2027");
-  const [loading,     setLoading]     = useState(false);
-  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [classes, setClasses] = useState<ClassSection[]>([]);
+  const [rankings, setRankings] = useState<StudentRank[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [classesLoading, setClassesLoading] = useState(true);
+  
+  // Selection filters
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [selectedSemester, setSelectedSemester] = useState("Semester 1");
+  const [selectedYear, setSelectedYear] = useState("2026-2027");
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   useEffect(() => {
-    api.getClasses().then(setClasses).catch(() => {});
+    loadClasses();
   }, []);
 
-  const loadRankings = async () => {
-    if (!classId) return;
-    setLoading(true);
+  async function loadClasses() {
+    setClassesLoading(true);
     try {
-      const data = await api.getClassRankings(classId, semester, academicYear);
-      setRankings(data);
-      setSelectedClass(classes.find((c) => c.id === classId));
-    } catch (e) {
-      setRankings([]);
+      const list = await api.getClasses();
+      setClasses(list);
+      if (list.length > 0) {
+        setSelectedClassId(list[0].id);
+      }
+    } catch (e: any) {
+      setAlert({ type: "error", msg: e.message || "Failed to load classes." });
+    } finally {
+      setClassesLoading(false);
     }
-    setLoading(false);
+  }
+
+  const handleCalculate = async () => {
+    if (!selectedClassId) return;
+    setLoading(true);
+    setAlert(null);
+    setRankings([]);
+    setExpandedStudentId(null);
+    try {
+      const data = await api.getClassRankings(selectedClassId, selectedSemester, selectedYear);
+      setRankings(data);
+    } catch (e: any) {
+      setAlert({ type: "error", msg: e.message || "No exams or grades recorded yet for this selection." });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getRankClass = (rank: number) => {
-    if (rank === 1) return "rank-1";
-    if (rank === 2) return "rank-2";
-    if (rank === 3) return "rank-3";
-    return "";
+  const getRankMedal = (rank: number) => {
+    if (rank === 1) return "🥇 1st";
+    if (rank === 2) return "🥈 2nd";
+    if (rank === 3) return "🥉 3rd";
+    return `${rank}th`;
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return "#22c55e";
-    if (score >= 75) return "#14b8a6";
-    if (score >= 60) return "#f59e0b";
-    return "#ef4444";
+  const toggleExpand = (studentId: string) => {
+    setExpandedStudentId(expandedStudentId === studentId ? null : studentId);
   };
+
+  const activeClassName = classes.find((c) => c.id === selectedClassId)?.name || "";
 
   return (
     <SidebarLayout activeId="rankings">
-      <header className="header">
-        <div>
-          <div className="header-title">Class Rankings</div>
-          <div className="header-sub">Automated homeroom ranking with weighted continuous assessment</div>
-        </div>
-      </header>
-
-      <div className="page animate-fade-in">
-        <div className="page-header">
-          <div className="page-header-left">
-            <h1 className="page-header-title">🏆 Sectional Rankings</h1>
-            <p className="page-header-sub">Calculates average score across all subjects, sorted by performance</p>
+      <div className="page animate-fade-in" style={{ padding: "28px" }}>
+        {/* Breadcrumbs */}
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ fontSize: "18px", fontWeight: "bold", color: "#111111" }}>Class Leaderboards & Rankings</div>
+          <div style={{ fontSize: "12.5px", color: "#888888", marginTop: "4px" }}>
+            Home - <span style={{ color: "var(--color-primary)" }}>Academic Rankings</span>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="card mb-4">
-          <div className="card-body">
-            <div className="form-grid three-col">
-              <div className="form-group">
-                <label className="form-label">Class Section <span className="form-required">*</span></label>
-                <select className="form-select" value={classId} onChange={(e) => setClassId(e.target.value)}>
-                  <option value="">— Select Class —</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name} (Grade {c.gradeLevel})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Semester</label>
-                <select className="form-select" value={semester} onChange={(e) => setSemester(e.target.value)}>
-                  <option value="Semester_1">Semester 1</option>
-                  <option value="Semester_2">Semester 2</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Academic Year</label>
-                <input className="form-input" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} placeholder="e.g. 2026-2027" />
-              </div>
-            </div>
-            <div className="form-actions">
-              <button
-                className="btn btn-primary"
-                onClick={loadRankings}
-                disabled={!classId || loading}
+        {alert && (
+          <div className={`alert alert-${alert.type} mb-4`} style={{
+            padding: "12px 16px",
+            borderRadius: "6px",
+            background: alert.type === "success" ? "#d1fae5" : "#fee2e2",
+            color: alert.type === "success" ? "#065f46" : "#991b1b",
+            fontSize: "13px",
+            display: "flex",
+            justifyContent: "space-between"
+          }}>
+            <span>{alert.type === "success" ? "✅" : "⚠️"} {alert.msg}</span>
+            <button style={{ fontWeight: "bold" }} onClick={() => setAlert(null)}>✕</button>
+          </div>
+        )}
+
+        {/* Filter Toolbar */}
+        <div className="card mb-4" style={{ padding: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px", alignItems: "flex-end" }}>
+            <div className="form-group">
+              <label className="form-label">Select Class Section</label>
+              <select
+                className="form-select"
+                value={selectedClassId}
+                onChange={(e) => setSelectedClassId(e.target.value)}
+                style={{ background: "#f8f9fa", border: "1px solid #e0e0e0" }}
+                disabled={classesLoading}
               >
-                {loading ? "⏳ Calculating..." : "🏆 Generate Rankings"}
-              </button>
+                <option value="">— Select Class —</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <div className="form-group">
+              <label className="form-label">Semester</label>
+              <select
+                className="form-select"
+                value={selectedSemester}
+                onChange={(e) => setSelectedSemester(e.target.value)}
+                style={{ background: "#f8f9fa", border: "1px solid #e0e0e0" }}
+              >
+                <option value="Semester 1">Semester 1</option>
+                <option value="Semester 2">Semester 2</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Academic Year</label>
+              <select
+                className="form-select"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                style={{ background: "#f8f9fa", border: "1px solid #e0e0e0" }}
+              >
+                <option value="2026-2027">2026-2027</option>
+                <option value="2027-2028">2027-2028</option>
+              </select>
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleCalculate}
+              disabled={loading || !selectedClassId}
+              style={{
+                background: "#ffae01",
+                color: "#111111",
+                fontWeight: "bold",
+                height: "42px",
+                display: "flex",
+                justifyContent: "center"
+              }}
+            >
+              {loading ? "Calculating..." : "🏆 Calculate Rankings"}
+            </button>
           </div>
         </div>
 
-        {/* Rankings Table */}
-        {rankings.length > 0 && (
-          <div className="card animate-slide-up">
+        {/* Leaderboard list */}
+        {!loading && rankings.length > 0 && (
+          <div className="card">
             <div className="card-header">
               <div>
-                <span className="card-title">
-                  🏆 {selectedClass?.name} Rankings — {semester.replace("_", " ")} {academicYear}
-                </span>
-                <p className="text-xs text-muted mt-1">{rankings.length} students ranked</p>
+                <span className="card-title" style={{ fontSize: "16px", fontWeight: "bold" }}>Academic Standings Ledger</span>
+                <div style={{ fontSize: "12px", color: "#666" }}>Class: {activeClassName} · {selectedSemester} · {selectedYear}</div>
               </div>
-              <button className="btn btn-outline btn-sm">🖨️ Print Report Card</button>
             </div>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Student</th>
-                    <th>Admission No.</th>
-                    <th>Subjects</th>
-                    <th style={{ textAlign: "right" }}>Average</th>
-                    <th style={{ textAlign: "right" }}>Grand Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rankings.map((r) => (
-                    <tr key={r.admissionNumber}>
-                      <td>
-                        <span className={`font-bold text-lg ${getRankClass(r.rank)}`}>
-                          {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : `#${r.rank}`}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <div className="avatar avatar-sm" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
-                            {r.firstName[0]}
-                          </div>
-                          <div className="td-name">
-                            {r.firstName} {r.middleName} {r.lastName}
-                          </div>
-                        </div>
-                      </td>
-                      <td><span className="badge badge-blue">{r.admissionNumber}</span></td>
-                      <td>
-                        <div className="flex-col gap-1" style={{ minWidth: 200 }}>
-                          {r.subjectGrades.map((sg) => (
-                            <div key={sg.subjectName} className="score-bar-wrap">
-                              <span className="text-xs text-muted" style={{ minWidth: 100, fontSize: 11 }}>{sg.subjectName}</span>
-                              <div className="score-bar">
-                                <div
-                                  className="score-bar-fill"
-                                  style={{ width: `${sg.score}%`, background: getScoreColor(sg.score) }}
-                                />
-                              </div>
-                              <span className="text-xs font-bold" style={{ color: getScoreColor(sg.score), minWidth: 36, textAlign: "right" }}>
-                                {sg.score.toFixed(1)}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <span
-                          className="font-bold text-md"
-                          style={{ color: getScoreColor(r.average) }}
-                        >
-                          {r.average.toFixed(1)}%
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <span className="text-secondary">{r.grandTotal.toFixed(1)}</span>
-                      </td>
+
+            <div className="card-body" style={{ padding: "0" }}>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: "100px" }}>Rank</th>
+                      <th>Admission No.</th>
+                      <th>Student Full Name</th>
+                      <th>Grand Total</th>
+                      <th>Average Score</th>
+                      <th style={{ width: "140px", textAlign: "right" }}>Detailed Grades</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rankings.map((r) => {
+                      const isExpanded = expandedStudentId === r.studentId;
+                      return (
+                        <React.Fragment key={r.studentId}>
+                          <tr style={{ background: r.rank <= 3 ? "rgba(255, 174, 1, 0.04)" : "transparent" }}>
+                            <td>
+                              <span className={`badge ${r.rank === 1 ? "badge-amber" : r.rank === 2 ? "badge-gray" : r.rank === 3 ? "badge-teal" : "badge-blue"}`} style={{ fontWeight: "bold", fontSize: "12px" }}>
+                                {getRankMedal(r.rank)}
+                              </span>
+                            </td>
+                            <td><span className="badge badge-blue">{r.admissionNumber}</span></td>
+                            <td className="td-name">{r.firstName} {r.middleName} {r.lastName}</td>
+                            <td>{r.grandTotal} marks</td>
+                            <td style={{ fontWeight: "bold", color: "var(--color-secondary)", fontSize: "14px" }}>
+                              {r.average.toFixed(2)}%
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <button
+                                className="btn btn-xs btn-outline"
+                                onClick={() => toggleExpand(r.studentId)}
+                                style={{ background: isExpanded ? "var(--color-secondary)" : "transparent", color: isExpanded ? "#fff" : "var(--text-secondary)" }}
+                              >
+                                {isExpanded ? "Hide Card ▴" : "View Card ▾"}
+                              </button>
+                            </td>
+                          </tr>
+
+                          {/* Expanded detail row */}
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={6} style={{ background: "#f8f9fa", padding: "16px 30px" }}>
+                                <div style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "12px", color: "var(--color-secondary)" }}>
+                                  Subject-wise Continuous Assessment Standings:
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+                                  {r.subjectGrades.map((sg) => (
+                                    <div
+                                      key={sg.subjectId}
+                                      style={{
+                                        background: "#ffffff",
+                                        padding: "10px 14px",
+                                        borderRadius: "4px",
+                                        border: "1px solid #e2e8f0",
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center"
+                                      }}
+                                    >
+                                      <div>
+                                        <div style={{ fontWeight: "bold", fontSize: "12px" }}>{sg.subjectName}</div>
+                                        <div style={{ fontSize: "10px", color: "#666" }}>Code: {sg.subjectCode}</div>
+                                      </div>
+                                      <span style={{ fontWeight: "bold", fontSize: "14px", color: sg.score >= 50 ? "var(--color-success)" : "var(--color-danger)" }}>
+                                        {sg.score.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
-        {!loading && rankings.length === 0 && classId && (
-          <div className="empty-state">
-            <div className="empty-state-icon">📊</div>
-            <div className="empty-state-title">No rankings yet</div>
-            <div className="empty-state-desc">
-              No grades found for the selected class, semester, and academic year. Enter grades first then generate rankings.
+        {loading && (
+          <div style={{ padding: "40px", textAlign: "center" }}>
+            <div className="spinner" style={{ margin: "0 auto 12px" }} />
+            <div>Calculating GPAs and standinds rankings...</div>
+          </div>
+        )}
+
+        {!loading && rankings.length === 0 && selectedClassId && (
+          <div className="card animate-fade-in">
+            <div className="card-body">
+              <div className="empty-state" style={{ padding: "40px", textAlign: "center" }}>
+                <div style={{ fontSize: "48px" }}>📊</div>
+                <div style={{ fontWeight: "bold", fontSize: "16px", marginTop: "12px" }}>No Standings Compiled</div>
+                <div style={{ color: "#777", fontSize: "13px" }}>Please check that exams and grades are registered for this class. Click "Calculate Rankings" to build leadership registers.</div>
+              </div>
             </div>
           </div>
         )}

@@ -30,8 +30,8 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-panel">
         <div className="login-brand">
-          <div className="login-brand-icon">🎓</div>
-          <div className="login-brand-name">EduCore SMS</div>
+          <div className="login-brand-icon" style={{ background: "#ffae01", color: "#042954" }}>🎓</div>
+          <div className="login-brand-name"><span style={{ color: "#ffae01" }}>Wegde</span> SMS</div>
           <div className="login-brand-sub">Enterprise School Management System</div>
         </div>
 
