@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import app from "./app";
 import sequelize from "./config/database";
 import { setupAssociations } from "./database/associations";
+import { runMigrations } from "./database/migrate";
 
 dotenv.config();
 
@@ -14,6 +15,9 @@ sequelize
   .authenticate()
   .then(async () => {
     console.log("PostgreSQL connected");
+    
+    // Run database migrations
+    await runMigrations();
     
     // Sync models to database tables
     await sequelize.sync();

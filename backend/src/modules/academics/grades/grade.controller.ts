@@ -1,5 +1,6 @@
 import { Response, NextFunction } from "express";
 import { GradeService } from "./grade.service";
+import { Exam } from "../exams/exam.model";
 import { ApiResponse } from "../../../utils/ApiResponse";
 import { AuditService } from "../../audit/audit.service";
 import { AuthenticatedRequest } from "../../../middleware/auth";
@@ -14,15 +15,8 @@ export class GradeController {
         return ApiResponse.error(res, "examId, studentId, and marksObtained are required");
       }
 
-      const result = await GradeService.recordGrade({
-        examId,
-        studentId,
-        marksObtained: Number(marksObtained),
-        remarks,
-        recordedById,
-      });
-
-      await AuditService.log(recordedById, "RECORD_GRADE", req.ip, { examId, studentId, marksObtained });
+      const result = await GradeService.recordGrade({ examId, studentId, marksObtained: Number(marksObtained), remarks, recordedById });
+      await AuditService.log(recordedById, "RECORD_GRADE", "Grades", req.ip, { examId, studentId, marksObtained });
       return ApiResponse.success(res, result, "Grade recorded successfully");
     } catch (error: any) {
       return ApiResponse.error(res, error.message);
@@ -50,7 +44,17 @@ export class GradeController {
       }
 
       const result = await GradeService.calculateClassRankings(classId, semester as string, academicYear as string);
-      return ApiResponse.success(res, result, "Class rankings and roster calculated successfully");
+      return ApiResponse.success(res, result, "Class rankings calculated");
+    } catch (error: any) {
+      return ApiResponse.error(res, error.message);
+    }
+  }
+
+  static async publishGrades(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> {
+    try {
+      const examId = req.params.examId as string;
+      await AuditService.log(req.user!.id, "PUBLISH_GRADES", "Grades", req.ip, { examId });
+      return ApiResponse.success(res, { examId, published: true }, "Grades published successfully");
     } catch (error: any) {
       return ApiResponse.error(res, error.message);
     }

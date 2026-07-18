@@ -7,6 +7,7 @@ export class Subject extends Model {
   public code!: string;
   public gradeLevel!: number;
   public stream!: string; // 'General' | 'NaturalScience' | 'SocialScience'
+  public department?: string;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -36,6 +37,10 @@ Subject.init(
       type: DataTypes.STRING,
       defaultValue: "General",
       allowNull: false,
+    },
+    department: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

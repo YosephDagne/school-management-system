@@ -17,6 +17,8 @@ interface NavItem {
 interface SidebarLayoutProps {
   children: ReactNode;
   activeId: string;
+  permissionRequired?: string;
+  allowedRoles?: string[];
 }
 
 const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
@@ -24,27 +26,35 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "Main Menu",
     items: [
       { id: "dashboard", label: "Dashboard", icon: "🏠", path: "/dashboard" },
-      { id: "students",   label: "Students Portal", icon: "👨‍🎓", path: "/students", permission: "manage_students" },
-      { id: "teachers",   label: "Teachers",    icon: "👨‍🏫", path: "/teachers", permission: "manage_teachers" },
-      { id: "parents",    label: "Parents",     icon: "👨‍👩‍👧", path: "/parents", permission: "manage_students" },
-      { id: "classes",    label: "Class & Sections", icon: "🏛️",  path: "/classes", permission: "manage_classes" },
-      { id: "subjects",   label: "Subjects",    icon: "📖",  path: "/subjects", permission: "manage_subjects" },
-      { id: "attendance", label: "Attendance",  icon: "✅",  path: "/attendance", permission: "manage_attendance" },
-      { id: "grades",     label: "Exams & Grades", icon: "📝",  path: "/grades", permission: "manage_grades" },
-      { id: "rankings",   label: "Class Rankings", icon: "🏆",  path: "/rankings", permission: "manage_grades" },
+      { id: "students",   label: "Students Portal", icon: "👨‍🎓", path: "/students", permission: "student.read" },
+      { id: "teachers",   label: "Teachers",    icon: "👨‍🏫", path: "/teachers", permission: "teacher.read" },
+      { id: "parents",    label: "Parents",     icon: "👨‍👩‍👧", path: "/parents", permission: "student.read" },
+      { id: "classes",    label: "Class & Sections", icon: "🏛️",  path: "/classes", permission: "settings.manage" },
+      { id: "subjects",   label: "Subjects",    icon: "📖",  path: "/subjects", permission: "settings.manage" },
+      { id: "attendance", label: "Attendance",  icon: "✅",  path: "/attendance", permission: "attendance.read" },
+      { id: "grades",     label: "Exams & Grades", icon: "📝",  path: "/grades", permission: "grade.read" },
+      { id: "rankings",   label: "Class Rankings", icon: "🏆",  path: "/rankings", permission: "grade.read" },
     ],
   },
   {
     label: "School Finance & Library",
     items: [
-      { id: "finance",    label: "Finance & Fees", icon: "💰",  path: "/finance", permission: "manage_finance" },
-      { id: "library",    label: "Library Desk",   icon: "📚",  path: "/library", permission: "manage_library" },
+      { id: "finance",    label: "Finance & Fees", icon: "💰",  path: "/finance", permission: "finance.read" },
+      { id: "library",    label: "Library Desk",   icon: "📚",  path: "/library", permission: "library.read" },
+    ],
+  },
+  {
+    label: "System Administration",
+    items: [
+      { id: "users",      label: "Users Accounts", icon: "👤",  path: "/users", permission: "user.read" },
+      { id: "roles",      label: "Roles & Permissions", icon: "🔑",  path: "/roles", permission: "role.manage" },
+      { id: "audit",      label: "Security Audit Logs", icon: "📋",  path: "/audit", permission: "audit.read" },
     ],
   },
 ];
 
-export default function SidebarLayout({ children, activeId }: SidebarLayoutProps) {
-  const { user, logout, hasPermission } = useAuth();
+export default function SidebarLayout({ children, activeId, permissionRequired, allowedRoles }: SidebarLayoutProps) {
+  const { user, logout, hasPermission, isLoading } = useAuth();
   const router = useRouter();
 
   // Dropdown States
@@ -70,6 +80,32 @@ export default function SidebarLayout({ children, activeId }: SidebarLayoutProps
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (permissionRequired && !hasPermission(permissionRequired)) {
+      router.push("/unauthorized");
+      return;
+    }
+
+    if (allowedRoles && !allowedRoles.some(r => user.roles.includes(r))) {
+      router.push("/unauthorized");
+      return;
+    }
+
+    // Default item permission check
+    const allItems = NAV_SECTIONS.flatMap(s => s.items);
+    const item = allItems.find(i => i.id === activeId);
+    if (item && item.permission && !hasPermission(item.permission)) {
+      router.push("/unauthorized");
+      return;
+    }
+  }, [user, isLoading, activeId, permissionRequired, allowedRoles, router, hasPermission]);
 
   useEffect(() => {
     loadGlobalNavbarData();
@@ -148,7 +184,7 @@ export default function SidebarLayout({ children, activeId }: SidebarLayoutProps
     ? user.username.slice(0, 2).toUpperCase()
     : "AD";
 
-  const roleName = user?.role.replace("_", " ") ?? "ADMIN";
+  const roleName = user?.roles.join(", ").replace(/_/g, " ") ?? "ADMIN";
 
   const recentMessages = [
     { sender: "Parent Yoseph", text: "Inquiring about report card details.", time: "10m ago" },

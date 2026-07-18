@@ -13,6 +13,7 @@ export class Teacher extends Model {
   public qualification!: string;
   public specialization!: string;
   public status!: string; // 'Active' | 'Inactive' | 'On_Leave'
+  public department?: string;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -70,6 +71,10 @@ Teacher.init(
       type: DataTypes.STRING,
       defaultValue: "Active",
       allowNull: false,
+    },
+    department: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

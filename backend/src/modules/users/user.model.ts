@@ -6,10 +6,9 @@ export class User extends Model {
   public username!: string;
   public email?: string;
   public password!: string;
-  public roleId!: string;
   public isActive!: boolean;
   public lastLogin?: Date;
-  public role!: any;
+  public roles!: any[];
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -37,10 +36,6 @@ User.init(
     },
     password: {
       type: DataTypes.STRING,
-      allowNull: false,
-    },
-    roleId: {
-      type: DataTypes.UUID,
       allowNull: false,
     },
     isActive: {

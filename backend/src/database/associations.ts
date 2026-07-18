@@ -1,6 +1,8 @@
 import { User } from "../modules/users/user.model";
 import { Role } from "../modules/rbac/role.model";
 import { Permission } from "../modules/rbac/permission.model";
+import { UserRole } from "../modules/rbac/user-role.model";
+import { RolePermission } from "../modules/rbac/role-permission.model";
 import { Student } from "../modules/students/student.model";
 import { Parent } from "../modules/parents/parent.model";
 import { Teacher } from "../modules/teachers/teacher.model";
@@ -20,19 +22,29 @@ import { Document } from "../modules/documents/document.model";
 import { AuditLog } from "../modules/audit/audit.model";
 
 export function setupAssociations() {
-  // 1. User & Role
-  User.belongsTo(Role, { foreignKey: "roleId", as: "role" });
-  Role.hasMany(User, { foreignKey: "roleId", as: "users" });
+  // 1. User & Role (Many-to-Many via Join Table)
+  User.belongsToMany(Role, {
+    through: UserRole,
+    foreignKey: "userId",
+    otherKey: "roleId",
+    as: "roles",
+  });
+  Role.belongsToMany(User, {
+    through: UserRole,
+    foreignKey: "roleId",
+    otherKey: "userId",
+    as: "users",
+  });
 
   // 2. Role & Permission (Many-to-Many via Join Table)
   Role.belongsToMany(Permission, {
-    through: "role_permissions",
+    through: RolePermission,
     foreignKey: "roleId",
     otherKey: "permissionId",
     as: "permissions",
   });
   Permission.belongsToMany(Role, {
-    through: "role_permissions",
+    through: RolePermission,
     foreignKey: "permissionId",
     otherKey: "roleId",
     as: "roles",

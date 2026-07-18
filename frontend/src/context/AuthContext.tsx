@@ -6,8 +6,11 @@ interface User {
   id: string;
   username: string;
   email?: string;
-  role: string;
+  roles: string[];
   permissions: string[];
+  studentId?: string;
+  parentId?: string;
+  teacherId?: string;
 }
 
 interface AuthContextType {
@@ -17,6 +20,7 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   hasPermission: (perm: string) => boolean;
+  hasRole: (role: string | string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -47,32 +51,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     
-    setToken(data.data.token);
-    setUser(data.data.user);
+    const { accessToken, refreshToken, user: userData } = data.data;
+    
+    setToken(accessToken);
+    setUser(userData);
     
     if (typeof window !== "undefined") {
-      localStorage.setItem("sms_token", data.data.token);
-      localStorage.setItem("sms_user", JSON.stringify(data.data.user));
+      localStorage.setItem("sms_token", accessToken);
+      localStorage.setItem("sms_refresh_token", refreshToken);
+      localStorage.setItem("sms_user", JSON.stringify(userData));
     }
   };
 
   const logout = () => {
+    // Call server logout optionally in background
+    if (token) {
+      fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      }).catch(() => {});
+    }
+
     setUser(null);
     setToken(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem("sms_token");
+      localStorage.removeItem("sms_refresh_token");
       localStorage.removeItem("sms_user");
     }
   };
 
   const hasPermission = (perm: string) => {
     if (!user) return false;
-    if (user.role === "SUPER_ADMIN") return true;
+    if (user.roles.includes("Super Admin") || user.roles.includes("SUPER_ADMIN")) return true;
     return user.permissions.includes(perm);
   };
 
+  const hasRole = (role: string | string[]) => {
+    if (!user) return false;
+    if (user.roles.includes("Super Admin") || user.roles.includes("SUPER_ADMIN")) return true;
+    const allowed = Array.isArray(role) ? role : [role];
+    return allowed.some((r) => user.roles.includes(r));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, hasPermission }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading, hasPermission, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,19 +1,16 @@
 import { Model, DataTypes } from "sequelize";
 import sequelize from "../../config/database";
 
-export class AuditLog extends Model {
+export class UserRole extends Model {
   public id!: string;
   public userId!: string;
-  public action!: string;
-  public module!: string;
-  public ipAddress?: string;
-  public details?: string;
+  public roleId!: string;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
 
-AuditLog.init(
+UserRole.init(
   {
     id: {
       type: DataTypes.UUID,
@@ -23,26 +20,28 @@ AuditLog.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
+      references: {
+        model: "users",
+        key: "id",
+      },
     },
-    action: {
-      type: DataTypes.STRING,
+    roleId: {
+      type: DataTypes.UUID,
       allowNull: false,
-    },
-    module: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    ipAddress: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    details: {
-      type: DataTypes.TEXT,
-      allowNull: true,
+      references: {
+        model: "roles",
+        key: "id",
+      },
     },
   },
   {
     sequelize,
-    tableName: "audit_logs",
+    tableName: "user_roles",
+    indexes: [
+      {
+        unique: true,
+        fields: ["userId", "roleId"],
+      },
+    ],
   }
 );

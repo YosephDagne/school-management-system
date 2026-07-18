@@ -10,6 +10,7 @@ export class Exam extends Model {
   public weightage!: number; // percentage, e.g. 30.0 for 30%
   public semester!: string; // 'Semester_1' | 'Semester_2'
   public academicYear!: string; // e.g. "2026-2027"
+  public isNationalExam!: boolean;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -48,6 +49,11 @@ Exam.init(
     },
     academicYear: {
       type: DataTypes.STRING,
+      allowNull: false,
+    },
+    isNationalExam: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
       allowNull: false,
     },
   },

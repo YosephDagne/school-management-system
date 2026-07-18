@@ -14,16 +14,8 @@ export class AttendanceController {
         return ApiResponse.error(res, "studentId, classId, date, and status are required");
       }
 
-      const result = await AttendanceService.recordAttendance({
-        studentId,
-        classId,
-        subjectId,
-        date,
-        status,
-        recordedById,
-      });
-
-      await AuditService.log(recordedById, "RECORD_ATTENDANCE", req.ip, { studentId, date, status });
+      const result = await AttendanceService.recordAttendance({ studentId, classId, subjectId, date, status, recordedById });
+      await AuditService.log(recordedById, "RECORD_ATTENDANCE", "Attendance", req.ip, { studentId, date, status });
       return ApiResponse.success(res, result, "Attendance recorded successfully");
     } catch (error: any) {
       return ApiResponse.error(res, error.message);
@@ -40,7 +32,7 @@ export class AttendanceController {
       }
 
       const result = await AttendanceService.bulkRecordAttendance(records, recordedById);
-      await AuditService.log(recordedById, "BULK_RECORD_ATTENDANCE", req.ip, { count: records.length });
+      await AuditService.log(recordedById, "BULK_RECORD_ATTENDANCE", "Attendance", req.ip, { count: records.length });
       return ApiResponse.success(res, result, "Bulk attendance sheet saved");
     } catch (error: any) {
       return ApiResponse.error(res, error.message);
@@ -52,9 +44,7 @@ export class AttendanceController {
       const classId = req.params.classId as string;
       const { date, subjectId } = req.query;
 
-      if (!date) {
-        return ApiResponse.error(res, "date query parameter is required (YYYY-MM-DD)");
-      }
+      if (!date) return ApiResponse.error(res, "date query parameter is required (YYYY-MM-DD)");
 
       const result = await AttendanceService.getClassAttendance(classId, date as string, subjectId as string);
       return ApiResponse.success(res, result, "Class attendance sheet retrieved");

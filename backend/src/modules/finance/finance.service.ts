@@ -21,6 +21,11 @@ export class FinanceService {
     return fee;
   }
 
+  // 2. Get all fees
+  static async getAllFees() {
+    return await Fee.findAll({ order: [["createdAt", "DESC"]] });
+  }
+
   // 2. Process a Payment receipt
   static async recordPayment(data: {
     studentId: string;

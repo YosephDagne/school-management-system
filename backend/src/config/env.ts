@@ -11,5 +11,6 @@ export const ENV = {
   DB_USER: process.env.DB_USER || "postgres",
   DB_PASSWORD: process.env.DB_PASSWORD || "",
   JWT_SECRET: process.env.JWT_SECRET || "fallback_super_secret_key_12345",
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || "fallback_refresh_secret_key_67890",
   NODE_ENV: process.env.NODE_ENV || "development",
 };
